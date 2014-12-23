@@ -19,7 +19,7 @@ let whitespace = spaces
 let equals = pstring "="
 //let openBrace = pstring "{"
 //let closeBrace = pstring "}"
-//let plus = pstring "+"
+let plus = pstring "+"
 let identifier' = identifier (new IdentifierOptions())
 //let type' = pstring "type"
 let let' = pstring "let"
@@ -28,12 +28,12 @@ let module' = pstring "module"
 let expr, (exprImpl : Parser<AstExpression, _> ref) = createParserForwardedToRef()
 let integer = pint32 .>> whitespace
 let intLiteral = integer |>> AstLiteral
-(*let addExpression =
+let addExpression =
     intLiteral
     .>> plus .>> whitespace
     .>>. intLiteral
-    |>> AstAddExpression*)
-exprImpl := intLiteral
+    |>> AstAddExpression
+exprImpl := attempt addExpression <|> intLiteral
 
 (*let valueDeclaration =
     let' .>> whitespace
@@ -90,9 +90,11 @@ type IlDeclaration =
 
 and IlExpression =
     | IlLiteral of int
+    | IlAdd of IlExpression * IlExpression
 
-let exprBuildIl = function
+let rec exprBuildIl = function
     | AstLiteral (value) -> IlLiteral (value)
+    | AstAddExpression (lhs, rhs) -> IlAdd(exprBuildIl lhs, exprBuildIl rhs)
     | _ -> failwith "wat"
 
 let rec declBuildIl = function
@@ -100,8 +102,11 @@ let rec declBuildIl = function
     | AstFunction (name, expr) -> IlFunction (name, exprBuildIl expr)
 
 // Codegen
-let exprCodegen (ilg : ILGenerator) = function
+let rec exprCodegen (ilg : ILGenerator) = function
     | IlLiteral (value) -> ilg.Emit(OpCodes.Ldc_I4, value)
+    | IlAdd(lhs, rhs) -> exprCodegen ilg lhs
+                         exprCodegen ilg rhs
+                         ilg.Emit(OpCodes.Add)
 
 let declCodegen (typeBuilder : TypeBuilder) = function
     | IlModule _ -> failwith "well darn"
@@ -142,7 +147,7 @@ let assembly =
     parseModule @"
 
     module FirstVertical
-        let firstFunc () = 1337
+        let firstFunc () = 1337 + 80085
 
     "
     //|> declFoldConstants
