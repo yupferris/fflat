@@ -8,15 +8,24 @@ open FParsec
 
 // AST + Parser
 type AstDeclaration =
-    | AstModule of string * AstDeclaration
     | AstFunction of string * AstExpression
 
 and AstExpression =
     | AstAddExpression of AstExpression * AstExpression
     | AstLiteral of int
 
+type AstModule =
+    {
+        name : string
+        decl : AstDeclaration
+    }
+
 let whitespace = spaces
 let equals = pstring "="
+let openParen = pstring "("
+let closeParen = pstring ")"
+let parens x =
+    openParen .>> whitespace >>. x .>> whitespace .>> closeParen
 //let openBrace = pstring "{"
 //let closeBrace = pstring "}"
 let plus = pstring "+"
@@ -24,16 +33,23 @@ let identifier' = identifier (new IdentifierOptions())
 //let type' = pstring "type"
 let let' = pstring "let"
 let module' = pstring "module"
+let end' = pstring "end"
 
 let expr, (exprImpl : Parser<AstExpression, _> ref) = createParserForwardedToRef()
 let integer = pint32 .>> whitespace
 let intLiteral = integer |>> AstLiteral
-let addExpression =
+let primary = parens expr <|> intLiteral
+let addExpr =
+    ((primary .>> whitespace .>>. (plus .>> whitespace >>. primary)
+    |>> AstAddExpression)
+    <|> primary)
+     .>> whitespace
+(*let addExpression =
     intLiteral
     .>> plus .>> whitespace
     .>>. intLiteral
-    |>> AstAddExpression
-exprImpl := attempt addExpression <|> intLiteral
+    |>> AstAddExpression*)
+exprImpl := addExpr
 
 (*let valueDeclaration =
     let' .>> whitespace
@@ -58,7 +74,13 @@ let moduleDeclaration =
     >>. identifier' .>> whitespace
     .>>. functionDeclaration
     .>> whitespace
-    |>> AstModule
+    |>> (fun (name, decl) ->
+            {
+                name = name
+                decl = decl
+            })
+    .>> whitespace
+    .>> end'
 
 let parseModule code =
     match run moduleDeclaration code with
@@ -89,27 +111,39 @@ type IlDeclaration =
     | IlFunction of string * IlExpression
 
 and IlExpression =
+    | IlAddExpression of IlExpression * IlExpression
     | IlLiteral of int
-    | IlAdd of IlExpression * IlExpression
+
+type IlModule =
+    {
+        name : string
+        decl : IlDeclaration
+    }
 
 let rec exprBuildIl = function
+    | AstAddExpression (left, right) ->
+        IlAddExpression (exprBuildIl left, exprBuildIl right)
     | AstLiteral (value) -> IlLiteral (value)
-    | AstAddExpression (lhs, rhs) -> IlAdd(exprBuildIl lhs, exprBuildIl rhs)
-    | _ -> failwith "wat"
 
 let rec declBuildIl = function
-    | AstModule (name, decl) -> IlModule (name, declBuildIl decl)
     | AstFunction (name, expr) -> IlFunction (name, exprBuildIl expr)
+
+let moduleBuildIl (astModule : AstModule) =
+    {
+        name = astModule.name
+        decl = declBuildIl astModule.decl
+    }
 
 // Codegen
 let rec exprCodegen (ilg : ILGenerator) = function
+    | IlAddExpression (left, right) ->
+        exprCodegen ilg left
+        exprCodegen ilg right
+        ilg.Emit(OpCodes.Add)
+
     | IlLiteral (value) -> ilg.Emit(OpCodes.Ldc_I4, value)
-    | IlAdd(lhs, rhs) -> exprCodegen ilg lhs
-                         exprCodegen ilg rhs
-                         ilg.Emit(OpCodes.Add)
 
 let declCodegen (typeBuilder : TypeBuilder) = function
-    | IlModule _ -> failwith "well darn"
     | IlFunction (name, expr) ->
         let methodBuilder =
             typeBuilder.DefineMethod(
@@ -121,37 +155,40 @@ let declCodegen (typeBuilder : TypeBuilder) = function
         exprCodegen ilg expr
         ilg.Emit(OpCodes.Ret)
 
-let codegen = function
-    | IlModule (name, decl) ->
-        let assemblyName = new AssemblyName("TestAssembly")
-        let appDomain = AppDomain.CurrentDomain
-        let assemblyBuilder =
-            appDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run)
-        let moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name)
+let codegen ilModule =
+    let assemblyName = new AssemblyName("TestAssembly")
+    let appDomain = AppDomain.CurrentDomain
+    let assemblyBuilder =
+        appDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run)
+    let moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name)
 
-        let typeBuilder =
-            moduleBuilder.DefineType(name,
-                TypeAttributes.Public ||| TypeAttributes.Class)
+    let typeBuilder =
+        moduleBuilder.DefineType(ilModule.name,
+            TypeAttributes.Public ||| TypeAttributes.Class)
         
-        declCodegen typeBuilder decl
+    declCodegen typeBuilder ilModule.decl
 
-        typeBuilder.CreateType() |> ignore
+    typeBuilder.CreateType() |> ignore
 
-        assemblyBuilder
-
-    | _ -> failwith "Expected IL module declaration"
+    assemblyBuilder
 
 // Test
+let print x =
+    printfn "%A" x
+    x
+
 let assembly =
     //parseDeclaration "let jake = 80085 + 29"
     parseModule @"
 
     module FirstVertical
-        let firstFunc () = 1337 + 80085
+        let firstFunc () = (1337 + 45) + 5
+    end
 
     "
     //|> declFoldConstants
-    |> declBuildIl
+    |> moduleBuildIl
+    |> print
     |> codegen
 
 
