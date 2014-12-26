@@ -25,28 +25,24 @@ let equals = pstring "="
 let openParen = pstring "("
 let closeParen = pstring ")"
 let parens x =
-    openParen .>> whitespace >>. x .>> whitespace .>> closeParen
+    openParen .>> whitespace >>. x .>> whitespace .>> closeParen .>> whitespace
 //let openBrace = pstring "{"
 //let closeBrace = pstring "}"
-let plus = pstring "+"
 let identifier' = identifier (new IdentifierOptions())
 //let type' = pstring "type"
 let let' = pstring "let"
 let module' = pstring "module"
 let end' = pstring "end"
 
-let expr, (exprImpl : Parser<AstExpression, _> ref) = createParserForwardedToRef()
+let opp = new OperatorPrecedenceParser<_, _, _>()
+let expr = opp.ExpressionParser
 let integer = pint32 .>> whitespace
 let intLiteral = integer |>> AstLiteral
-let primary = parens expr <|> intLiteral
-let addExpr =
-    ((primary .>> whitespace .>>. (many (plus .>> whitespace >>. primary))
-    |>> fun x ->
-        let x, y = x
-        List.reduce (fun x y -> AstAddExpression (x, y)) (x :: y))
-    <|> primary)
-    .>> whitespace
-exprImpl := addExpr
+let term = parens expr <|> (intLiteral .>> whitespace)
+opp.TermParser <- term
+opp.AddOperator(
+    InfixOperator("+", whitespace, 1, Associativity.Left,
+        fun x y -> AstAddExpression (x, y)))
 
 let functionDeclaration =
     let' .>> whitespace
@@ -171,7 +167,7 @@ let assembly =
     parseModule @"
 
     module FirstVertical
-        let firstFunc () = 1337 + 80085 + 5
+        let firstFunc () = 1337 + (80085 + 5)
     end
 
     "
