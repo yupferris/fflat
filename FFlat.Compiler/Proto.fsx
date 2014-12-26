@@ -12,6 +12,7 @@ type AstDeclaration =
 
 and AstExpression =
     | AstAddExpression of AstExpression * AstExpression
+    | AstMulExpression of AstExpression * AstExpression
     | AstLiteral of int
 
 type AstModule =
@@ -43,6 +44,9 @@ opp.TermParser <- term
 opp.AddOperator(
     InfixOperator("+", whitespace, 1, Associativity.Left,
         fun x y -> AstAddExpression (x, y)))
+opp.AddOperator(
+    InfixOperator("*", whitespace, 2, Associativity.Left,
+        fun x y -> AstMulExpression (x, y)))
 
 let functionDeclaration =
     let' .>> whitespace
@@ -79,6 +83,7 @@ type IlDeclaration =
 
 and IlExpression =
     | IlAddExpression of IlExpression * IlExpression
+    | IlMulExpression of IlExpression * IlExpression
     | IlLiteral of int
 
 type IlModule =
@@ -90,6 +95,8 @@ type IlModule =
 let rec exprBuildIl = function
     | AstAddExpression (left, right) ->
         IlAddExpression (exprBuildIl left, exprBuildIl right)
+    | AstMulExpression (left, right) ->
+        IlMulExpression (exprBuildIl left, exprBuildIl right)
     | AstLiteral (value) -> IlLiteral (value)
 
 let rec declBuildIl = function
@@ -126,6 +133,11 @@ let rec exprCodegen (ilg : ILGenerator) = function
         exprCodegen ilg left
         exprCodegen ilg right
         ilg.Emit(OpCodes.Add)
+
+    | IlMulExpression (left, right) ->
+        exprCodegen ilg left
+        exprCodegen ilg right
+        ilg.Emit(OpCodes.Mul)
 
     | IlLiteral (value) -> ilg.Emit(OpCodes.Ldc_I4, value)
 
@@ -167,14 +179,13 @@ let assembly =
     parseModule @"
 
     module FirstVertical
-        let firstFunc () = 1337 + (80085 + 5)
+        let firstFunc () = 2 + 3 * 4
     end
 
     "
     |> moduleBuildIl
     |> print
     |> codegen
-
 
 assembly.GetType("FirstVertical").GetMethod("firstFunc").Invoke(null, [||])
 :?> int
