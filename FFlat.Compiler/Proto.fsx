@@ -44,12 +44,9 @@ let integer = pint32 .>> whitespace
 let intLiteral = integer |>> AstLiteral
 let term = parens expr <|> (intLiteral .>> whitespace)
 opp.TermParser <- term
-opp.AddOperator(
-    InfixOperator("+", whitespace, 1, Associativity.Left,
-        fun x y -> AstBinOpExpression (Add, x, y)))
-opp.AddOperator(
-    InfixOperator("*", whitespace, 2, Associativity.Left,
-        fun x y -> AstBinOpExpression (Mul, x, y)))
+let binOp op x y = AstBinOpExpression (op, x, y)
+opp.AddOperator(InfixOperator("+", whitespace, 1, Associativity.Left, binOp Add))
+opp.AddOperator(InfixOperator("*", whitespace, 2, Associativity.Left, binOp Mul))
 
 let functionDeclaration =
     let' .>> whitespace
@@ -117,23 +114,32 @@ let moduleBuildIl (astModule : AstModule) =
     }
 
 // Optimization
-(*let rec exprFoldConstants = function
-    | AstAddExpression (left, right) ->
+let binOpToNativeOp = function
+    | Add -> (+)
+    | Mul -> (*)
+
+let rec exprFoldConstants = function
+    | IlBinOpExpression (op, left, right) ->
         let foldedLeft = exprFoldConstants left
         let foldedRight = exprFoldConstants right
-        let defaultValue = AstAddExpression(foldedLeft, foldedRight)
+        let defaultValue = IlBinOpExpression(op, foldedLeft, foldedRight)
         match foldedLeft with
-        | AstLiteral foldedLeftValue ->
+        | IlLiteral foldedLeftValue ->
             match foldedRight with
-            | AstLiteral foldedRightValue ->
-                AstLiteral (foldedLeftValue + foldedRightValue)
+            | IlLiteral foldedRightValue ->
+                IlLiteral ((binOpToNativeOp op) foldedLeftValue foldedRightValue)
             | _ -> defaultValue
         | _ -> defaultValue
     | x -> x
 
 let declFoldConstants = function
-    | Value (name, expr) -> Value (name, exprFoldConstants expr)
-    | x -> x*)
+    | IlFunction (name, expr) -> IlFunction (name, exprFoldConstants expr)
+
+let foldConstants (ilModule : IlModule) =
+    {
+        ilModule with
+            decls = List.map declFoldConstants ilModule.decls
+    }
 
 // Codegen
 let binOpToOpCode = function
@@ -192,6 +198,8 @@ let assembly =
 
     "
     |> moduleBuildIl
+    |> print
+    |> foldConstants
     |> print
     |> codegen
 
