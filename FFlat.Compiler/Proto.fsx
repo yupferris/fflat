@@ -6,13 +6,14 @@ open System.Reflection
 open System.Reflection.Emit
 open FParsec
 
-// AST + Parser
-type AstBinOp =
+// Common
+type BinOp =
     | Add
     | Mul
 
+// AST + Parser
 type AstExpression =
-    | AstBinOpExpression of AstBinOp * AstExpression * AstExpression
+    | AstBinOpExpression of BinOp * AstExpression * AstExpression
     | AstLiteral of int
 
 type AstDeclaration =
@@ -78,12 +79,8 @@ let parseModule code =
     | Failure (message, _, _) -> failwith message
 
 // IL
-type IlBinOp =
-    | Add
-    | Mul
-
 type IlExpression =
-    | IlBinOpExpression of IlBinOp * IlExpression * IlExpression
+    | IlBinOpExpression of BinOp * IlExpression * IlExpression
     | IlLiteral of int
 
 type IlDeclaration =
@@ -95,13 +92,9 @@ type IlModule =
         decls : IlDeclaration list
     }
 
-let astBinOpToIlBinOp = function
-    | AstBinOp.Add -> Add
-    | AstBinOp.Mul -> Mul
-
 let rec exprBuildIl = function
     | AstBinOpExpression (op, left, right) ->
-        IlBinOpExpression (astBinOpToIlBinOp op, exprBuildIl left, exprBuildIl right)
+        IlBinOpExpression (op, exprBuildIl left, exprBuildIl right)
     | AstLiteral (value) -> IlLiteral (value)
 
 let rec declBuildIl = function
