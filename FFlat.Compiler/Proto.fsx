@@ -7,13 +7,16 @@ open System.Reflection.Emit
 open FParsec
 
 // AST + Parser
+type AstBinOp =
+    | Add
+    | Mul
+
+type AstExpression =
+    | AstBinOpExpression of AstBinOp * AstExpression * AstExpression
+    | AstLiteral of int
+
 type AstDeclaration =
     | AstFunction of string * AstExpression
-
-and AstExpression =
-    | AstAddExpression of AstExpression * AstExpression
-    | AstMulExpression of AstExpression * AstExpression
-    | AstLiteral of int
 
 type AstModule =
     {
@@ -43,10 +46,10 @@ let term = parens expr <|> (intLiteral .>> whitespace)
 opp.TermParser <- term
 opp.AddOperator(
     InfixOperator("+", whitespace, 1, Associativity.Left,
-        fun x y -> AstAddExpression (x, y)))
+        fun x y -> AstBinOpExpression (Add, x, y)))
 opp.AddOperator(
     InfixOperator("*", whitespace, 2, Associativity.Left,
-        fun x y -> AstMulExpression (x, y)))
+        fun x y -> AstBinOpExpression (Mul, x, y)))
 
 let functionDeclaration =
     let' .>> whitespace
@@ -78,13 +81,16 @@ let parseModule code =
     | Failure (message, _, _) -> failwith message
 
 // IL
+type IlBinOp =
+    | Add
+    | Mul
+
+type IlExpression =
+    | IlBinOpExpression of IlBinOp * IlExpression * IlExpression
+    | IlLiteral of int
+
 type IlDeclaration =
     | IlFunction of string * IlExpression
-
-and IlExpression =
-    | IlAddExpression of IlExpression * IlExpression
-    | IlMulExpression of IlExpression * IlExpression
-    | IlLiteral of int
 
 type IlModule =
     {
@@ -92,11 +98,13 @@ type IlModule =
         decl : IlDeclaration
     }
 
+let astBinOpToIlBinOp = function
+    | AstBinOp.Add -> Add
+    | AstBinOp.Mul -> Mul
+
 let rec exprBuildIl = function
-    | AstAddExpression (left, right) ->
-        IlAddExpression (exprBuildIl left, exprBuildIl right)
-    | AstMulExpression (left, right) ->
-        IlMulExpression (exprBuildIl left, exprBuildIl right)
+    | AstBinOpExpression (op, left, right) ->
+        IlBinOpExpression (astBinOpToIlBinOp op, exprBuildIl left, exprBuildIl right)
     | AstLiteral (value) -> IlLiteral (value)
 
 let rec declBuildIl = function
@@ -128,16 +136,15 @@ let declFoldConstants = function
     | x -> x*)
 
 // Codegen
-let rec exprCodegen (ilg : ILGenerator) = function
-    | IlAddExpression (left, right) ->
-        exprCodegen ilg left
-        exprCodegen ilg right
-        ilg.Emit(OpCodes.Add)
+let binOpToOpCode = function
+    | Add -> OpCodes.Add
+    | Mul -> OpCodes.Mul
 
-    | IlMulExpression (left, right) ->
+let rec exprCodegen (ilg : ILGenerator) = function
+    | IlBinOpExpression (op, left, right) ->
         exprCodegen ilg left
         exprCodegen ilg right
-        ilg.Emit(OpCodes.Mul)
+        ilg.Emit(binOpToOpCode op)
 
     | IlLiteral (value) -> ilg.Emit(OpCodes.Ldc_I4, value)
 
