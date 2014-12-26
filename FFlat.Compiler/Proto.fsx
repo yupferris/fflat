@@ -40,23 +40,13 @@ let integer = pint32 .>> whitespace
 let intLiteral = integer |>> AstLiteral
 let primary = parens expr <|> intLiteral
 let addExpr =
-    ((primary .>> whitespace .>>. (plus .>> whitespace >>. primary)
-    |>> AstAddExpression)
+    ((primary .>> whitespace .>>. (many (plus .>> whitespace >>. primary))
+    |>> fun x ->
+        let x, y = x
+        List.reduce (fun x y -> AstAddExpression (x, y)) (x :: y))
     <|> primary)
-     .>> whitespace
-(*let addExpression =
-    intLiteral
-    .>> plus .>> whitespace
-    .>>. intLiteral
-    |>> AstAddExpression*)
+    .>> whitespace
 exprImpl := addExpr
-
-(*let valueDeclaration =
-    let' .>> whitespace
-    >>. identifier' .>> whitespace
-    .>> equals .>> whitespace
-    .>>. expr
-    |>> Value*)
 
 let functionDeclaration =
     let' .>> whitespace
@@ -87,27 +77,8 @@ let parseModule code =
     | Success (result, _, _) -> result
     | Failure (message, _, _) -> failwith message
 
-(*let rec exprFoldConstants = function
-    | AstAddExpression (left, right) ->
-        let foldedLeft = exprFoldConstants left
-        let foldedRight = exprFoldConstants right
-        let defaultValue = AstAddExpression(foldedLeft, foldedRight)
-        match foldedLeft with
-        | AstLiteral foldedLeftValue ->
-            match foldedRight with
-            | AstLiteral foldedRightValue ->
-                AstLiteral (foldedLeftValue + foldedRightValue)
-            | _ -> defaultValue
-        | _ -> defaultValue
-    | x -> x
-
-let declFoldConstants = function
-    | Value (name, expr) -> Value (name, exprFoldConstants expr)
-    | x -> x*)
-
 // IL
 type IlDeclaration =
-    | IlModule of string * IlDeclaration
     | IlFunction of string * IlExpression
 
 and IlExpression =
@@ -133,6 +104,25 @@ let moduleBuildIl (astModule : AstModule) =
         name = astModule.name
         decl = declBuildIl astModule.decl
     }
+
+// Optimization
+(*let rec exprFoldConstants = function
+    | AstAddExpression (left, right) ->
+        let foldedLeft = exprFoldConstants left
+        let foldedRight = exprFoldConstants right
+        let defaultValue = AstAddExpression(foldedLeft, foldedRight)
+        match foldedLeft with
+        | AstLiteral foldedLeftValue ->
+            match foldedRight with
+            | AstLiteral foldedRightValue ->
+                AstLiteral (foldedLeftValue + foldedRightValue)
+            | _ -> defaultValue
+        | _ -> defaultValue
+    | x -> x
+
+let declFoldConstants = function
+    | Value (name, expr) -> Value (name, exprFoldConstants expr)
+    | x -> x*)
 
 // Codegen
 let rec exprCodegen (ilg : ILGenerator) = function
@@ -165,7 +155,7 @@ let codegen ilModule =
     let typeBuilder =
         moduleBuilder.DefineType(ilModule.name,
             TypeAttributes.Public ||| TypeAttributes.Class)
-        
+
     declCodegen typeBuilder ilModule.decl
 
     typeBuilder.CreateType() |> ignore
@@ -178,15 +168,13 @@ let print x =
     x
 
 let assembly =
-    //parseDeclaration "let jake = 80085 + 29"
     parseModule @"
 
     module FirstVertical
-        let firstFunc () = (1337 + 45) + 5
+        let firstFunc () = 1337 + 80085 + 5
     end
 
     "
-    //|> declFoldConstants
     |> moduleBuildIl
     |> print
     |> codegen
