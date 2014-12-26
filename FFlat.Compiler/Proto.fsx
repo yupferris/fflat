@@ -21,7 +21,7 @@ type AstDeclaration =
 type AstModule =
     {
         name : string
-        decl : AstDeclaration
+        decls : AstDeclaration list
     }
 
 let whitespace = spaces
@@ -65,12 +65,12 @@ let moduleDeclaration =
     whitespace
     .>> module' .>> whitespace
     >>. identifier' .>> whitespace
-    .>>. functionDeclaration
+    .>>. many functionDeclaration
     .>> whitespace
-    |>> (fun (name, decl) ->
+    |>> (fun (name, decls) ->
             {
                 name = name
-                decl = decl
+                decls = decls
             })
     .>> whitespace
     .>> end'
@@ -95,7 +95,7 @@ type IlDeclaration =
 type IlModule =
     {
         name : string
-        decl : IlDeclaration
+        decls : IlDeclaration list
     }
 
 let astBinOpToIlBinOp = function
@@ -113,7 +113,7 @@ let rec declBuildIl = function
 let moduleBuildIl (astModule : AstModule) =
     {
         name = astModule.name
-        decl = declBuildIl astModule.decl
+        decls = List.map declBuildIl astModule.decls
     }
 
 // Optimization
@@ -171,7 +171,7 @@ let codegen ilModule =
         moduleBuilder.DefineType(ilModule.name,
             TypeAttributes.Public ||| TypeAttributes.Class)
 
-    declCodegen typeBuilder ilModule.decl
+    List.iter (declCodegen typeBuilder) ilModule.decls
 
     typeBuilder.CreateType() |> ignore
 
@@ -187,6 +187,7 @@ let assembly =
 
     module FirstVertical
         let firstFunc () = 2 + 3 * 4
+        let secondFunc () = 2 * 3 + 4
     end
 
     "
@@ -194,5 +195,5 @@ let assembly =
     |> print
     |> codegen
 
-assembly.GetType("FirstVertical").GetMethod("firstFunc").Invoke(null, [||])
-:?> int
+["firstFunc"; "secondFunc"]
+|> List.map (fun x -> assembly.GetType("FirstVertical").GetMethod(x).Invoke(null, [||]))
