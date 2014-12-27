@@ -49,7 +49,12 @@
   </Choose>
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
-    <Compile Include="Library1.fs" />
+    <Compile Include="Common.fs" />
+    <Compile Include="Ast.fs" />
+    <Compile Include="Parser.fs" />
+    <Compile Include="Il.fs" />
+    <Compile Include="Optimization.fs" />
+    <Compile Include="Codegen.fs" />
     <None Include="Proto.fsx" />
     <None Include="packages.config" />
     <None Include="app.config" />
