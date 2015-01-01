@@ -25,10 +25,13 @@ let assembly =
 
 module FirstVertical =
     begin
-        let firstFunc () = 2 + 3 * 4
-        let secondFunc () = 2 * (((((3))))) + 4
-        let thirdFunc () = ()
-        let fourthFunc (x : int) = x + 5
+        let func0 () = 2 + 3 * 4
+        let func1 () = 2 * (((((3))))) + 4
+        let func2 () = ()
+        let func3 (x : int) = x + 5
+        let func4 (x : int) (y : int) = x * y + 5
+        let func5 (jake : int) (rules : int) (hard : int) = jake + rules + hard
+        let func6 (a : int) (b : int) (c : int) (d : int) = 12
     end
 
     "
@@ -40,9 +43,12 @@ module FirstVertical =
     |> codegen
 
 [
-    ("firstFunc", [||])
-    ("secondFunc", [||])
-    ("thirdFunc", [||])
-    ("fourthFunc", [|2 :> obj|])
+    [||]
+    [||]
+    [||]
+    [|2 :> obj|]
+    [|3 :> obj; 4 :> obj|]
+    [|-1 :> obj; -2 :> obj; -3 :> obj|]
+    [|1 :> obj; 2 :> obj; 3 :> obj; 4 :> obj|]
 ]
-|> List.map (fun x -> assembly.GetType("FirstVertical").GetMethod(fst x).Invoke(null, snd x))
+|> List.mapi (fun i x -> assembly.GetType("FirstVertical").GetMethod("func" + i.ToString()).Invoke(null, x))
