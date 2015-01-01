@@ -12,10 +12,10 @@
             let foldedRight = exprFoldConstants right
             let defaultValue = IlBinOpExpression(op, foldedLeft, foldedRight)
             match foldedLeft with
-            | IlLiteral foldedLeftValue ->
+            | IlIntLiteral foldedLeftValue ->
                 match foldedRight with
-                | IlLiteral foldedRightValue ->
-                    IlLiteral ((binOpToNativeOp op) foldedLeftValue foldedRightValue)
+                | IlIntLiteral foldedRightValue ->
+                    IlIntLiteral ((binOpToNativeOp op) foldedLeftValue foldedRightValue)
                 | _ -> defaultValue
             | _ -> defaultValue
         | x -> x

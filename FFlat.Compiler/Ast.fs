@@ -2,8 +2,9 @@
     open FFlat.Compiler.Common
 
     type AstExpression =
+        | AstUnitLiteral
+        | AstIntLiteral of int
         | AstBinOpExpression of BinOp * AstExpression * AstExpression
-        | AstLiteral of int
 
     type AstParameter =
         | AstNamedParameter of string

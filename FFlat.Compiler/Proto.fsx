@@ -27,6 +27,7 @@ module FirstVertical =
     begin
         let firstFunc () = 2 + 3 * 4
         let secondFunc () = 2 * (((((3))))) + 4
+        let thirdFunc () = ()
     end
 
     "
@@ -37,5 +38,5 @@ module FirstVertical =
     |> print
     |> codegen
 
-["firstFunc"; "secondFunc"]
+["firstFunc"; "secondFunc"; "thirdFunc"]
 |> List.map (fun x -> assembly.GetType("FirstVertical").GetMethod(x).Invoke(null, [||]))

@@ -23,8 +23,9 @@
     let opp = new OperatorPrecedenceParser<_, _, _>()
     let expr = opp.ExpressionParser
     let integer = pint32 .>> whitespace
-    let intLiteral = integer |>> AstLiteral
-    let term = parens expr <|> (intLiteral .>> whitespace)
+    let unitLiteral = unitValue |>> fun _ -> AstUnitLiteral
+    let intLiteral = integer |>> AstIntLiteral
+    let term = (unitLiteral .>> whitespace) <|> (intLiteral .>> whitespace) <|> parens expr
     opp.TermParser <- term
     let binOp op x y = AstBinOpExpression (op, x, y)
     opp.AddOperator(InfixOperator("+", whitespace, 1, Associativity.Left, binOp Add))

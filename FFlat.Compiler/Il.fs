@@ -8,8 +8,9 @@
         | IlIntType
 
     type IlExpression =
+        | IlUnitLiteral
+        | IlIntLiteral of int
         | IlBinOpExpression of BinOp * IlExpression * IlExpression
-        | IlLiteral of int
 
     type IlDeclaration =
         | IlFunction of string * IlType * IlExpression
@@ -28,9 +29,10 @@
                 }
 
     let rec exprBuildIl = function
+        | AstUnitLiteral -> IlUnitLiteral
+        | AstIntLiteral (value) -> IlIntLiteral (value)
         | AstBinOpExpression (op, left, right) ->
             IlBinOpExpression (op, exprBuildIl left, exprBuildIl right)
-        | AstLiteral (value) -> IlLiteral (value)
 
     let rec declBuildIl = function
         | AstFunction (name, _, expr) -> IlFunction (name, IlUnknownType, exprBuildIl expr)
@@ -42,8 +44,9 @@
         }
 
     let rec exprGetType = function
+        | IlUnitLiteral -> IlUnitType
+        | IlIntLiteral _ -> IlIntType
         | IlBinOpExpression (_, _, _) -> IlIntType
-        | IlLiteral _ -> IlIntType
 
     let rec declCheckTypes = function
         | IlFunction (name, _, expr) -> IlFunction (name, exprGetType expr, expr)
