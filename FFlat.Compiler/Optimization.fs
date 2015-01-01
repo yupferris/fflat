@@ -21,7 +21,8 @@
         | x -> x
 
     let declFoldConstants = function
-        | IlFunction (name, returnType, expr) -> IlFunction (name, returnType, exprFoldConstants expr)
+        | IlFunction (name, parameters, returnType, expr) ->
+            IlFunction (name, parameters, returnType, exprFoldConstants expr)
 
     let foldConstants (ilModule : IlModule) =
         {

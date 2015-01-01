@@ -28,15 +28,21 @@ module FirstVertical =
         let firstFunc () = 2 + 3 * 4
         let secondFunc () = 2 * (((((3))))) + 4
         let thirdFunc () = ()
+        let fourthFunc (x : int) = x + 5
     end
 
     "
     |> moduleBuildIl
-    |> moduleCheckTypes
+    |> checkTypes
     |> print
     |> foldConstants
     |> print
     |> codegen
 
-["firstFunc"; "secondFunc"; "thirdFunc"]
-|> List.map (fun x -> assembly.GetType("FirstVertical").GetMethod(x).Invoke(null, [||]))
+[
+    ("firstFunc", [||])
+    ("secondFunc", [||])
+    ("thirdFunc", [||])
+    ("fourthFunc", [|2 :> obj|])
+]
+|> List.map (fun x -> assembly.GetType("FirstVertical").GetMethod(fst x).Invoke(null, snd x))

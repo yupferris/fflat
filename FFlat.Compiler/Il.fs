@@ -10,10 +10,15 @@
     type IlExpression =
         | IlUnitLiteral
         | IlIntLiteral of int
+        | IlArgumentReference of int * IlType
         | IlBinOpExpression of BinOp * IlExpression * IlExpression
 
+    type IlParameter =
+        | IlNamedParameter of string * IlType
+        | IlUnitParameter
+
     type IlDeclaration =
-        | IlFunction of string * IlType * IlExpression
+        | IlFunction of string * IlParameter list * IlType * IlExpression
 
     type IlModule =
         {
@@ -28,14 +33,28 @@
                     decls = List.map f x.decls
                 }
 
-    let rec exprBuildIl = function
+    let rec exprBuildIl parameters = function
         | AstUnitLiteral -> IlUnitLiteral
         | AstIntLiteral (value) -> IlIntLiteral (value)
+        | AstIdentifierLiteral (name) ->
+            IlArgumentReference
+                (List.findIndex
+                    (function
+                        | IlNamedParameter (paramName, _) -> name = paramName
+                        | _ -> false)
+                    parameters,
+                IlIntType)
         | AstBinOpExpression (op, left, right) ->
-            IlBinOpExpression (op, exprBuildIl left, exprBuildIl right)
+            IlBinOpExpression (op, exprBuildIl parameters left, exprBuildIl parameters right)
 
     let rec declBuildIl = function
-        | AstFunction (name, _, expr) -> IlFunction (name, IlUnknownType, exprBuildIl expr)
+        | AstFunction (name, parameters, expr) ->
+            let ilParams =
+                parameters
+                |> List.map (function
+                    | AstNamedParameter (name, _) -> IlNamedParameter (name, IlIntType)
+                    | AstUnitParameter -> IlUnitParameter)
+            IlFunction (name, ilParams, IlUnknownType, exprBuildIl ilParams expr)
 
     let moduleBuildIl (astModule : AstModule) =
         {
@@ -46,9 +65,11 @@
     let rec exprGetType = function
         | IlUnitLiteral -> IlUnitType
         | IlIntLiteral _ -> IlIntType
+        | IlArgumentReference (_, type') -> type'
         | IlBinOpExpression (_, _, _) -> IlIntType
 
     let rec declCheckTypes = function
-        | IlFunction (name, _, expr) -> IlFunction (name, exprGetType expr, expr)
+        | IlFunction (name, parameters, _, expr) ->
+            IlFunction (name, parameters, exprGetType expr, expr)
 
-    let moduleCheckTypes = IlModule.mapDecls declCheckTypes
+    let checkTypes = IlModule.mapDecls declCheckTypes

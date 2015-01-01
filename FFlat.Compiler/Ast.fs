@@ -4,11 +4,12 @@
     type AstExpression =
         | AstUnitLiteral
         | AstIntLiteral of int
+        | AstIdentifierLiteral of string
         | AstBinOpExpression of BinOp * AstExpression * AstExpression
 
     type AstParameter =
-        | AstNamedParameter of string
-        | AstUnnamedParameter
+        | AstNamedParameter of string * string
+        //| AstUnnamedParameter
         | AstUnitParameter
 
     type AstDeclaration =
