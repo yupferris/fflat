@@ -7,6 +7,7 @@
     let equals = pstring "="
     let openParen = pstring "("
     let closeParen = pstring ")"
+    let underscore = pstring "_"
     let parens x =
         openParen .>> whitespace >>. x .>> whitespace .>> closeParen .>> whitespace
     //let openBrace = pstring "{"
@@ -17,6 +18,7 @@
     let module' = pstring "module"
     let begin' = pstring "begin"
     let end' = pstring "end"
+    let unitValue = pstring "()"
 
     let opp = new OperatorPrecedenceParser<_, _, _>()
     let expr = opp.ExpressionParser
@@ -28,13 +30,22 @@
     opp.AddOperator(InfixOperator("+", whitespace, 1, Associativity.Left, binOp Add))
     opp.AddOperator(InfixOperator("*", whitespace, 2, Associativity.Left, binOp Mul))
 
+    let parameter =
+        ((identifier' |>> AstNamedParameter)
+        <|> (underscore |>> fun _ -> AstUnnamedParameter)
+        <|> (unitValue |>> fun _ -> AstUnitParameter))
+        .>> whitespace
+
     let functionDeclaration =
         let' .>> whitespace
         >>. identifier' .>> whitespace
-        .>> pstring "()" .>> whitespace
+        .>>. many1 parameter
         .>> equals .>> whitespace
         .>>. expr
-        |>> AstFunction
+        |>> fun xyz ->
+            let xy, z = xyz
+            let x, y = xy
+            AstFunction (x, y, z)
 
     let declaration = functionDeclaration
 

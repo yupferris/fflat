@@ -18,7 +18,7 @@
         | IlLiteral (value) -> ilg.Emit(OpCodes.Ldc_I4, value)
 
     let declCodegen (typeBuilder : TypeBuilder) = function
-        | IlFunction (name, expr) ->
+        | IlFunction (name, _, expr) ->
             let methodBuilder =
                 typeBuilder.DefineMethod(
                     name,
