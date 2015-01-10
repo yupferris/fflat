@@ -12,9 +12,9 @@
     let openBrace = pstring "{"
     let closeBrace = pstring "}"
     //let underscore = pstring "_"
-    //let betweenWhitespace left right x = left .>> whitespace >>. x .>> whitespace .>> right .>> whitespace
+    let betweenWhitespace left right x = left .>> whitespace >>. x .>> whitespace .>> right .>> whitespace
     let parens x = openParen .>> whitespace >>. x .>> whitespace .>> closeParen .>> whitespace//betweenWhitespace openParen closeParen
-    let braces x = openBrace .>> whitespace >>. x .>> whitespace .>> closeBrace .>> whitespace//betweenWhitespace openBrace closeBrace
+    let braces = betweenWhitespace openBrace closeBrace
     let identifier' = identifier (new IdentifierOptions())
     let let' = pstring "let"
     let module' = pstring "module"
@@ -40,9 +40,11 @@
     opp.AddOperator(InfixOperator("+", whitespace, 1, Associativity.Left, binOp Add))
     opp.AddOperator(InfixOperator("*", whitespace, 2, Associativity.Left, binOp Mul))
 
+    let nameTypePair = identifier' .>> whitespace .>> colon .>> whitespace .>>. int'
+
     let parameter =
         ((unitValue |>> fun _ -> AstUnitParameter)
-        <|> (parens (identifier' .>> whitespace .>> colon .>> whitespace .>>. int') |>> AstNamedParameter)) // TODO
+        <|> (parens nameTypePair |>> AstNamedParameter))
         //<|> (underscore |>> fun _ -> AstUnnamedParameter)
         .>> whitespace
 
@@ -50,11 +52,7 @@
         type' .>> whitespace
         .>> identifier' .>> whitespace
         .>> equals .>> whitespace
-        .>>.
-            (braces
-                (sepBy1
-                    (identifier' .>> whitespace .>> colon .>> whitespace .>>. int')
-                    (semicolon .>> whitespace))) // TODO
+        .>>. (braces (sepBy1 nameTypePair (semicolon .>> whitespace)))
         |>> AstRecord
 
     let functionDeclaration =
