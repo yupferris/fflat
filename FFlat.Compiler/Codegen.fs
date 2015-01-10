@@ -39,6 +39,7 @@
             ilg.Emit(binOpToOpCode op)
 
     let declCodegen (typeBuilder : TypeBuilder) = function
+        | IlRecord (name, members) -> failwith "not yet"
         | IlFunction (name, parameters, returnType, expr) ->
             let methodBuilder =
                 typeBuilder.DefineMethod(

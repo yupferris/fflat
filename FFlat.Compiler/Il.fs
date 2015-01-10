@@ -13,11 +13,18 @@
         | IlArgumentReference of int * IlType
         | IlBinOpExpression of BinOp * IlExpression * IlExpression
 
+    type IlRecordMember =
+        {
+            name : string
+            type' : IlType
+        }
+
     type IlParameter =
         | IlNamedParameter of string * IlType
         | IlUnitParameter
 
     type IlDeclaration =
+        | IlRecord of string * IlRecordMember list
         | IlFunction of string * IlParameter list * IlType * IlExpression
 
     type IlModule =
@@ -32,6 +39,8 @@
                     name = x.name
                     decls = List.map f x.decls
                 }
+
+    // TODO: Proper type resolving before I get much further
 
     let rec exprBuildIl parameters = function
         | AstUnitLiteral -> IlUnitLiteral
@@ -48,6 +57,16 @@
             IlBinOpExpression (op, exprBuildIl parameters left, exprBuildIl parameters right)
 
     let rec declBuildIl = function
+        | AstRecord (name, members) -> // Lol
+            IlRecord
+                (name,
+                List.map
+                    (fun x ->
+                        {
+                            name = fst x
+                            type' = IlIntType
+                        })
+                    members)
         | AstFunction (name, parameters, expr) ->
             let ilParams =
                 parameters
@@ -71,5 +90,6 @@
     let rec declCheckTypes = function
         | IlFunction (name, parameters, _, expr) ->
             IlFunction (name, parameters, exprGetType expr, expr)
+        | x -> x // TODO
 
     let checkTypes = IlModule.mapDecls declCheckTypes
