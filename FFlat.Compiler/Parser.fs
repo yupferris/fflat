@@ -6,19 +6,21 @@
     let whitespace = spaces
     let equals = pstring "="
     let colon = pstring ":"
+    let semicolon = pstring ";"
     let openParen = pstring "("
     let closeParen = pstring ")"
+    let openBrace = pstring "{"
+    let closeBrace = pstring "}"
     //let underscore = pstring "_"
-    let parens x =
-        openParen .>> whitespace >>. x .>> whitespace .>> closeParen .>> whitespace
-    //let openBrace = pstring "{"
-    //let closeBrace = pstring "}"
+    //let betweenWhitespace left right x = left .>> whitespace >>. x .>> whitespace .>> right .>> whitespace
+    let parens x = openParen .>> whitespace >>. x .>> whitespace .>> closeParen .>> whitespace//betweenWhitespace openParen closeParen
+    let braces x = openBrace .>> whitespace >>. x .>> whitespace .>> closeBrace .>> whitespace//betweenWhitespace openBrace closeBrace
     let identifier' = identifier (new IdentifierOptions())
-    //let type' = pstring "type"
     let let' = pstring "let"
     let module' = pstring "module"
     let begin' = pstring "begin"
     let end' = pstring "end"
+    let type' = pstring "type"
     let int' = pstring "int"
     let unitValue = pstring "()"
 
@@ -40,9 +42,20 @@
 
     let parameter =
         ((unitValue |>> fun _ -> AstUnitParameter)
-        <|> (parens (identifier' .>> whitespace .>> colon .>> whitespace .>>. int') |>> AstNamedParameter))
+        <|> (parens (identifier' .>> whitespace .>> colon .>> whitespace .>>. int') |>> AstNamedParameter)) // TODO
         //<|> (underscore |>> fun _ -> AstUnnamedParameter)
         .>> whitespace
+
+    let recordDeclaration =
+        type' .>> whitespace
+        .>> identifier' .>> whitespace
+        .>> equals .>> whitespace
+        .>>.
+            (braces
+                (sepBy1
+                    (identifier' .>> whitespace .>> colon .>> whitespace .>>. int')
+                    (semicolon .>> whitespace))) // TODO
+        |>> AstRecord
 
     let functionDeclaration =
         let' .>> whitespace
@@ -55,7 +68,7 @@
             let x, y = xy
             AstFunction (x, y, z)
 
-    let declaration = functionDeclaration
+    let declaration = recordDeclaration <|> functionDeclaration
 
     let moduleDeclaration =
         whitespace
@@ -63,7 +76,7 @@
         >>. identifier' .>> whitespace
         .>> equals .>> whitespace
         .>> begin' .>> whitespace
-        .>>. many functionDeclaration
+        .>>. many declaration
         .>> whitespace
         |>> (fun (name, decls) ->
                 {

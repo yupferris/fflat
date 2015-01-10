@@ -25,6 +25,8 @@ let assembly =
 
 module FirstVertical =
     begin
+        type Type0 = { x : int; y : int }
+        
         let func0 () = 2 + 3 * 4
         let func1 () = 2 * (((((3))))) + 4
         let func2 () = ()

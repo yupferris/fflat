@@ -13,6 +13,7 @@
         | AstUnitParameter
 
     type AstDeclaration =
+        | AstRecord of string * (string * string) list
         | AstFunction of string * AstParameter list * AstExpression
 
     type AstModule =
