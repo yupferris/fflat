@@ -84,7 +84,7 @@
                     | AstUnitParameter -> IlUnitParameter)
             IlFunction (name, ilParams, IlUnknownType, exprBuildIl ilParams expr)
 
-    let moduleBuildIl (astModule : AstModule) =
+    let buildIl (astModule : AstModule) =
         {
             name = astModule.name
             decls = List.map declBuildIl astModule.decls

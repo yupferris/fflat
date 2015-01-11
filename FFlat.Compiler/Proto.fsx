@@ -7,6 +7,7 @@
 #load "Il.fs"
 #load "Optimization.fs"
 #load "Codegen.fs"
+#load "Compiler.fs"
 
 open FFlat.Compiler.Common
 open FFlat.Compiler.Ast
@@ -14,16 +15,11 @@ open FFlat.Compiler.Parser
 open FFlat.Compiler.Il
 open FFlat.Compiler.Optimization
 open FFlat.Compiler.Codegen
-
-// Test
-let print x =
-    printfn "%A" x
-    x
+open FFlat.Compiler.Compiler
 
 let assembly =
     // type Type0 = { x : int; y : int }
-
-    parseModule @"
+    compile @"
 
 module FirstVertical =
     begin
@@ -37,12 +33,6 @@ module FirstVertical =
     end
 
     "
-    |> moduleBuildIl
-    |> checkTypes
-    |> print
-    |> foldConstants
-    |> print
-    |> codegen
 
 [
     [||]
