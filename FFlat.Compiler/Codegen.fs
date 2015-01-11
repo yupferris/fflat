@@ -1,5 +1,6 @@
 ﻿module FFlat.Compiler.Codegen
     open System
+    open System.IO
     open System.Reflection
     open System.Reflection.Emit
     open FFlat.Compiler.Common
@@ -8,10 +9,6 @@
     type CodeGenOptions =
         | RunOnly
         | Save of string
-
-    let codeGenOptionsToAssemblyBuilderAccess = function
-        | RunOnly -> AssemblyBuilderAccess.Run
-        | Save _ -> AssemblyBuilderAccess.Save
 
     let ilTypeToMsilType = function
         | IlUnitType -> typeof<unit>
@@ -63,13 +60,23 @@
             ilg.Emit(OpCodes.Ret)
 
     let codegen options ilModule =
-        let assemblyName = new AssemblyName("TestAssembly")
         let appDomain = AppDomain.CurrentDomain
         let assemblyBuilder =
-            appDomain.DefineDynamicAssembly(
-                assemblyName,
-                codeGenOptionsToAssemblyBuilderAccess options)
-        let moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name)
+            match options with
+            | RunOnly ->
+                let assemblyName = new AssemblyName("TestAssembly")
+                appDomain.DefineDynamicAssembly(
+                    assemblyName,
+                    AssemblyBuilderAccess.Run)
+            | Save (fileName) ->
+                let assemblyName =
+                    new AssemblyName(
+                        Path.GetFileNameWithoutExtension fileName)
+                appDomain.DefineDynamicAssembly(
+                    assemblyName,
+                    AssemblyBuilderAccess.RunAndSave,
+                    (Path.GetDirectoryName fileName))
+        let moduleBuilder = assemblyBuilder.DefineDynamicModule(ilModule.name)
 
         let typeBuilder =
             moduleBuilder.DefineType(ilModule.name,
@@ -80,7 +87,7 @@
         typeBuilder.CreateType() |> ignore
 
         match options with
-        | Save (name) -> assemblyBuilder.Save name
+        | Save (fileName) -> assemblyBuilder.Save (Path.GetFileName fileName)
         | _ -> ()
 
         assemblyBuilder
