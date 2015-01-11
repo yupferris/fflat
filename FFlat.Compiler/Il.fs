@@ -40,7 +40,10 @@
                     decls = List.map f x.decls
                 }
 
-    // TODO: Proper type resolving before I get much further
+    let tryResolveType = function
+        | "unit" -> IlUnitType
+        | "int" -> IlIntType
+        | x -> failwith (sprintf "Bad type: %s" x)
 
     let rec exprBuildIl parameters = function
         | AstUnitLiteral -> IlUnitLiteral
@@ -64,14 +67,14 @@
                     (fun x ->
                         {
                             name = fst x
-                            type' = IlIntType
+                            type' = tryResolveType (snd x)
                         })
                     members)
         | AstFunction (name, parameters, expr) ->
             let ilParams =
                 parameters
                 |> List.map (function
-                    | AstNamedParameter (name, _) -> IlNamedParameter (name, IlIntType)
+                    | AstNamedParameter (name, type') -> IlNamedParameter (name, tryResolveType type')
                     | AstUnitParameter -> IlUnitParameter)
             IlFunction (name, ilParams, IlUnknownType, exprBuildIl ilParams expr)
 

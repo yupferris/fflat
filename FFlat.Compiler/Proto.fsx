@@ -21,12 +21,12 @@ let print x =
     x
 
 let assembly =
+    // type Type0 = { x : int; y : int }
+
     parseModule @"
 
 module FirstVertical =
     begin
-        type Type0 = { x : int; y : int }
-        
         let func0 () = 2 + 3 * 4
         let func1 () = 2 * (((((3))))) + 4
         let func2 () = ()
