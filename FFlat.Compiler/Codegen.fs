@@ -5,6 +5,14 @@
     open FFlat.Compiler.Common
     open FFlat.Compiler.Il
 
+    type CodeGenOptions =
+        | RunOnly
+        | Save of string
+
+    let codeGenOptionsToAssemblyBuilderAccess = function
+        | RunOnly -> AssemblyBuilderAccess.Run
+        | Save _ -> AssemblyBuilderAccess.Save
+
     let ilTypeToMsilType = function
         | IlUnitType -> typeof<unit>
         | IlIntType -> typeof<int>
@@ -54,11 +62,13 @@
             exprCodegen ilg expr
             ilg.Emit(OpCodes.Ret)
 
-    let codegen ilModule =
+    let codegen options ilModule =
         let assemblyName = new AssemblyName("TestAssembly")
         let appDomain = AppDomain.CurrentDomain
         let assemblyBuilder =
-            appDomain.DefineDynamicAssembly(assemblyName, AssemblyBuilderAccess.Run)
+            appDomain.DefineDynamicAssembly(
+                assemblyName,
+                codeGenOptionsToAssemblyBuilderAccess options)
         let moduleBuilder = assemblyBuilder.DefineDynamicModule(assemblyName.Name)
 
         let typeBuilder =
@@ -68,5 +78,9 @@
         List.iter (declCodegen typeBuilder) ilModule.decls
 
         typeBuilder.CreateType() |> ignore
+
+        match options with
+        | Save (name) -> assemblyBuilder.Save name
+        | _ -> ()
 
         assemblyBuilder

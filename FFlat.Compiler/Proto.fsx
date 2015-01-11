@@ -19,7 +19,7 @@ open FFlat.Compiler.Compiler
 
 let assembly =
     // type Type0 = { x : int; y : int }
-    compile @"
+    compile (Save "C:\\derp.dll") (*RunOnly*) @"
 
 module FirstVertical =
     begin
