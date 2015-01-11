@@ -45,17 +45,23 @@
         | "int" -> IlIntType
         | x -> failwith (sprintf "Bad type: %s" x)
 
+    let getParameterType = function
+        | IlNamedParameter (_, type') -> type'
+        | IlUnitParameter -> IlUnitType
+
     let rec exprBuildIl parameters = function
         | AstUnitLiteral -> IlUnitLiteral
         | AstIntLiteral (value) -> IlIntLiteral (value)
         | AstIdentifierLiteral (name) ->
-            IlArgumentReference
-                (List.findIndex
+            match
+                tryFindIndexItem
                     (function
                         | IlNamedParameter (paramName, _) -> name = paramName
                         | _ -> false)
-                    parameters,
-                IlIntType)
+                    parameters
+                with
+            | Some (index, param) -> IlArgumentReference (index, getParameterType param)
+            | None -> failwith (sprintf "Bad param ref: %s" name)
         | AstBinOpExpression (op, left, right) ->
             IlBinOpExpression (op, exprBuildIl parameters left, exprBuildIl parameters right)
 
