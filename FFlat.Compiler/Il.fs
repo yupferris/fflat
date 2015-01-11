@@ -56,7 +56,7 @@
             match
                 tryFindIndexItem
                     (function
-                        | IlNamedParameter (paramName, _) -> name = paramName
+                        | IlNamedParameter (paramName, _) -> paramName = name
                         | _ -> false)
                     parameters
                 with
@@ -94,7 +94,7 @@
         | IlUnitLiteral -> IlUnitType
         | IlIntLiteral _ -> IlIntType
         | IlArgumentReference (_, type') -> type'
-        | IlBinOpExpression (_, _, _) -> IlIntType
+        | IlBinOpExpression (_, _, _) -> IlIntType // TODO: Resolve properly
 
     let rec declCheckTypes = function
         | IlFunction (name, parameters, _, expr) ->
