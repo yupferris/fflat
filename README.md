@@ -4,6 +4,6 @@ A very early, overly-specialized, and naively- yet aggressively-optimized dialec
 
 ## Copyright and license
 
-Copyright © 2014 Jake "Ferris" Taylor
+Copyright Â© 2014-2015 Jake "Ferris" Taylor
 
 Licensed under the BSD 2-Clause License (see the file license.txt).
