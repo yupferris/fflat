@@ -4,10 +4,9 @@
     open FFlat.Compiler.Optimization
     open FFlat.Compiler.Codegen
 
-    let compile codeGenOptions x =
-        x
-        |> parseModule
-        |> buildIl
-        |> checkTypes
-        |> foldConstants
-        |> codegen codeGenOptions
+    let compile codeGenOptions =
+        parseModule
+        >> buildIl
+        >> checkTypes
+        >> foldConstants
+        >> codegen codeGenOptions
