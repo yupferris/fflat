@@ -49,7 +49,9 @@
             let recordTypeBuilder =
                 typeBuilder.DefineNestedType(
                     name,
-                    TypeAttributes.NestedPublic)
+                    TypeAttributes.NestedPublic |||
+                    TypeAttributes.Class |||
+                    TypeAttributes.Sealed)
 
             // Generate backing fields
             let fieldBuilders =
@@ -57,9 +59,10 @@
                 |> List.map (fun x ->
                     (x,
                         recordTypeBuilder.DefineField(
-                            "_" + x.name,
+                            x.name + "@",
                             ilTypeToMsilType x.type',
-                            FieldAttributes.Private)))
+                            FieldAttributes.Private |||
+                            FieldAttributes.InitOnly)))
                 |> Map.ofList
 
             // Generate getter properties for backing fields
@@ -69,7 +72,7 @@
                 let getterPropBuilder =
                     recordTypeBuilder.DefineProperty(
                         member'.name,
-                        PropertyAttributes.None,
+                        PropertyAttributes.HasDefault,
                         getterType,
                         null)
                 let getter =
@@ -88,11 +91,19 @@
             // Generate constructor
             let ctor =
                 recordTypeBuilder.DefineConstructor(
-                    MethodAttributes.Public,
+                    MethodAttributes.Public |||
+                    MethodAttributes.HideBySig,
                     CallingConventions.Standard,
                     members
                     |> List.map (fun x -> (Map.find x fieldBuilders).FieldType)
                     |> Array.ofList)
+            members
+            |> List.iteri (fun i x ->
+                ctor.DefineParameter(
+                    i + 1,
+                    ParameterAttributes.None,
+                    x.name)
+                |> ignore)
             let ilg = ctor.GetILGenerator()
             ilg.Emit(OpCodes.Ldarg_0)
             let objCtor = typeof<obj>.GetConstructor(Type.EmptyTypes)
@@ -107,16 +118,33 @@
 
             recordTypeBuilder.CreateType() |> ignore
         | IlFunction (name, parameters, returnType, expr) ->
+            let hasSingleUnitParam =
+                parameters.Length = 1 &&
+                List.forall
+                    (function
+                        | IlUnitParameter -> true
+                        | _ -> false)
+                    parameters
             let methodBuilder =
                 typeBuilder.DefineMethod(
                     name,
                     MethodAttributes.Public
                     ||| MethodAttributes.Static,
                     ilTypeToFunctionReturnMsilType returnType,
-                    if parameters.Length = 1 && List.forall (function
-                        | IlUnitParameter -> true
-                        | _ -> false) parameters then [||]
+                    if hasSingleUnitParam then [||]
                     else List.map ilParameterToMsilType parameters |> Array.ofList)
+            if not hasSingleUnitParam then
+                parameters
+                |> List.iteri
+                    (fun i ->
+                        function
+                        | IlNamedParameter (name, _) ->
+                            methodBuilder.DefineParameter(
+                                i + 1,
+                                ParameterAttributes.None,
+                                name)
+                            |> ignore
+                        | _ -> ())
             let ilg = methodBuilder.GetILGenerator()
             exprCodegen ilg expr
             ilg.Emit(OpCodes.Ret)
@@ -145,7 +173,9 @@
             moduleBuilder.DefineType(
                 ilModule.name,
                 TypeAttributes.Public
-                ||| TypeAttributes.Class)
+                ||| TypeAttributes.Class
+                ||| TypeAttributes.Abstract
+                ||| TypeAttributes.Sealed)
 
         List.iter (declCodegen typeBuilder) ilModule.decls
 
