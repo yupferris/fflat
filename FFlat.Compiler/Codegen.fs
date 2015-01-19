@@ -44,16 +44,22 @@
             exprCodegen ilg right
             ilg.Emit(binOpToOpCode op)
 
-    let declCodegen (moduleBuilder : ModuleBuilder) (typeBuilder : TypeBuilder) = function
+    let declCodegen (typeBuilder : TypeBuilder) = function
         | IlRecord (name, members) ->
-            let recordTypeBuilder = moduleBuilder.DefineType(name, TypeAttributes.Public)
+            let recordTypeBuilder =
+                typeBuilder.DefineNestedType(
+                    name,
+                    TypeAttributes.NestedPublic)
 
             // Generate backing fields
             let fieldBuilders =
                 members
                 |> List.map (fun x ->
-                    (x, recordTypeBuilder.DefineField(
-                        "_" + x.name, ilTypeToMsilType x.type', FieldAttributes.Private)))
+                    (x,
+                        recordTypeBuilder.DefineField(
+                            "_" + x.name,
+                            ilTypeToMsilType x.type',
+                            FieldAttributes.Private)))
                 |> Map.ofList
 
             // Generate getter properties for backing fields
@@ -141,7 +147,7 @@
                 TypeAttributes.Public
                 ||| TypeAttributes.Class)
 
-        List.iter (declCodegen moduleBuilder typeBuilder) ilModule.decls
+        List.iter (declCodegen typeBuilder) ilModule.decls
 
         typeBuilder.CreateType() |> ignore
 
