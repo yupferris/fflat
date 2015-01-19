@@ -104,7 +104,8 @@
             let methodBuilder =
                 typeBuilder.DefineMethod(
                     name,
-                    MethodAttributes.Public ||| MethodAttributes.Static,
+                    MethodAttributes.Public
+                    ||| MethodAttributes.Static,
                     ilTypeToFunctionReturnMsilType returnType,
                     if parameters.Length = 1 && List.forall (function
                         | IlUnitParameter -> true
@@ -135,8 +136,10 @@
             assemblyBuilder.DefineDynamicModule(ilModule.name, ilModule.name + ".dll", true)
 
         let typeBuilder =
-            moduleBuilder.DefineType(ilModule.name,
-                TypeAttributes.Public ||| TypeAttributes.Class)
+            moduleBuilder.DefineType(
+                ilModule.name,
+                TypeAttributes.Public
+                ||| TypeAttributes.Class)
 
         List.iter (declCodegen moduleBuilder typeBuilder) ilModule.decls
 
