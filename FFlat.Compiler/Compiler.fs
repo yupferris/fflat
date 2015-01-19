@@ -1,4 +1,5 @@
 ﻿module FFlat.Compiler.Compiler
+    open System.Reflection
     open FFlat.Compiler.Parser
     open FFlat.Compiler.Il
     open FFlat.Compiler.Optimization
@@ -10,3 +11,4 @@
         >> checkTypes
         >> foldConstants
         >> codegen codeGenOptions
+        >> (fun x -> x :> Assembly)
