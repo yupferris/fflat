@@ -46,11 +46,33 @@
     let declCodegen (moduleBuilder : ModuleBuilder) (typeBuilder : TypeBuilder) = function
         | IlRecord (name, members) ->
             let recordTypeBuilder = moduleBuilder.DefineType(name, TypeAttributes.Public)
-            members
-            |> List.iter (fun x ->
-                recordTypeBuilder.DefineField(
-                    x.name, ilTypeToMsilType x.type', FieldAttributes.Public)
-                |> ignore)
+            let fieldBuilders =
+                members
+                |> List.map (fun x ->
+                    (x, recordTypeBuilder.DefineField(
+                        "_" + x.name, ilTypeToMsilType x.type', FieldAttributes.Private)))
+                |> Map.ofList
+            fieldBuilders
+            |> Map.iter (fun member' fieldBuilder ->
+                let getterType = ilTypeToMsilType member'.type'
+                let getterPropBuilder =
+                    recordTypeBuilder.DefineProperty(
+                        member'.name,
+                        PropertyAttributes.None,
+                        getterType,
+                        null)
+                let getter =
+                    recordTypeBuilder.DefineMethod(
+                        "get_" + member'.name,
+                        MethodAttributes.Public |||
+                        MethodAttributes.SpecialName |||
+                        MethodAttributes.HideBySig,
+                        getterType,
+                        Type.EmptyTypes)
+                let ilg = getter.GetILGenerator()
+                ilg.Emit(OpCodes.Ldfld, fieldBuilder)
+                ilg.Emit(OpCodes.Ret)
+                getterPropBuilder.SetGetMethod(getter))
             recordTypeBuilder.CreateType() |> ignore
         | IlFunction (name, parameters, returnType, expr) ->
             let methodBuilder =
