@@ -44,7 +44,7 @@
 
     let recordDeclaration =
         type' .>> whitespace
-        .>> identifier' .>> whitespace
+        >>. identifier' .>> whitespace
         .>> equals .>> whitespace
         .>>. (braces (sepBy1 nameTypePair (semicolon .>> whitespace)))
         |>> AstRecord

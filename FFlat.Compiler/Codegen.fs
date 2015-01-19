@@ -79,7 +79,7 @@
                 ilg.Emit(OpCodes.Ret)
                 getterPropBuilder.SetGetMethod(getter))
 
-            // Generate proper constructor
+            // Generate constructor
             let ctor =
                 recordTypeBuilder.DefineConstructor(
                     MethodAttributes.Public,
