@@ -43,8 +43,15 @@
             exprCodegen ilg right
             ilg.Emit(binOpToOpCode op)
 
-    let declCodegen (typeBuilder : TypeBuilder) = function
-        | IlRecord (name, members) -> failwith "not yet"
+    let declCodegen (moduleBuilder : ModuleBuilder) (typeBuilder : TypeBuilder) = function
+        | IlRecord (name, members) ->
+            let recordTypeBuilder = moduleBuilder.DefineType(name, TypeAttributes.Public)
+            members
+            |> List.iter (fun x ->
+                recordTypeBuilder.DefineField(
+                    x.name, ilTypeToMsilType x.type', FieldAttributes.Public)
+                |> ignore)
+            recordTypeBuilder.CreateType() |> ignore
         | IlFunction (name, parameters, returnType, expr) ->
             let methodBuilder =
                 typeBuilder.DefineMethod(
@@ -82,7 +89,7 @@
             moduleBuilder.DefineType(ilModule.name,
                 TypeAttributes.Public ||| TypeAttributes.Class)
 
-        List.iter (declCodegen typeBuilder) ilModule.decls
+        List.iter (declCodegen moduleBuilder typeBuilder) ilModule.decls
 
         typeBuilder.CreateType() |> ignore
 

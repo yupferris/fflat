@@ -42,18 +42,18 @@
 
     let nameTypePair = identifier' .>> whitespace .>> colon .>> whitespace .>>. int'
 
-    let parameter =
-        ((unitValue |>> fun _ -> AstUnitParameter)
-        <|> (parens nameTypePair |>> AstNamedParameter))
-        //<|> (underscore |>> fun _ -> AstUnnamedParameter)
-        .>> whitespace
-
     let recordDeclaration =
         type' .>> whitespace
         .>> identifier' .>> whitespace
         .>> equals .>> whitespace
         .>>. (braces (sepBy1 nameTypePair (semicolon .>> whitespace)))
         |>> AstRecord
+
+    let parameter =
+        ((unitValue |>> fun _ -> AstUnitParameter)
+        <|> (parens nameTypePair |>> AstNamedParameter))
+        //<|> (underscore |>> fun _ -> AstUnnamedParameter)
+        .>> whitespace
 
     let functionDeclaration =
         let' .>> whitespace

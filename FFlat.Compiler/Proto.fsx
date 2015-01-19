@@ -18,7 +18,6 @@ open FFlat.Compiler.Codegen
 open FFlat.Compiler.Compiler
 
 let assembly =
-    // type Type0 = { x : int; y : int }
     compile (Save "C:\\Users\\Ferris\\Documents\\derp.dll") (*RunOnly*) @"
 
 module FirstVertical =
@@ -30,6 +29,8 @@ module FirstVertical =
         let func4 (x : int) (y : int) = x * y + 5
         let func5 (jake : int) (rules : int) (hard : int) = jake + rules + hard
         let func6 (a : int) (b : int) (c : int) (d : int) = 12
+
+        type SomeType = { x : int; y : int }
     end
 
     "
