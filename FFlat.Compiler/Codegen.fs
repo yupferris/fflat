@@ -83,7 +83,8 @@
                     assemblyName,
                     AssemblyBuilderAccess.RunAndSave,
                     (Path.GetDirectoryName fileName))
-        let moduleBuilder = assemblyBuilder.DefineDynamicModule(ilModule.name)
+        let moduleBuilder =
+            assemblyBuilder.DefineDynamicModule(ilModule.name, ilModule.name + ".dll", true)
 
         let typeBuilder =
             moduleBuilder.DefineType(ilModule.name,
