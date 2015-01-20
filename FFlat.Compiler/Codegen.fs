@@ -45,12 +45,23 @@
             exprCodegen ilg right
             ilg.Emit(binOpToOpCode op)
 
-    let addCustomAttribute<'a> (fieldBuilder : FieldBuilder) parameters =
+    let addAttr<'a> parameters f =
         let ctor =
             typeof<'a>.GetConstructor(
                 Array.map (fun x -> x.GetType()) parameters)
-        let attr = new CustomAttributeBuilder(ctor, parameters)
-        fieldBuilder.SetCustomAttribute(attr)
+        new CustomAttributeBuilder(ctor, parameters) |> f
+
+    let addTypeAttr<'a> parameters (typeBuilder : TypeBuilder) =
+        addAttr<'a> parameters typeBuilder.SetCustomAttribute
+
+    let addFieldAttr<'a> parameters (fieldBuilder : FieldBuilder) =
+        addAttr<'a> parameters fieldBuilder.SetCustomAttribute
+
+    let addPropAttr<'a> parameters (propBuilder : PropertyBuilder) =
+        addAttr<'a> parameters propBuilder.SetCustomAttribute
+
+    let addMethodAttr<'a> parameters (methodBuilder : MethodBuilder) =
+        addAttr<'a> parameters methodBuilder.SetCustomAttribute
 
     let declCodegen (typeBuilder : TypeBuilder) = function
         | IlRecord (name, members) ->
@@ -60,6 +71,9 @@
                     TypeAttributes.NestedPublic |||
                     TypeAttributes.Class |||
                     TypeAttributes.Sealed)
+            addTypeAttr<CompilationMappingAttribute>
+                [|SourceConstructFlags.RecordType|]
+                recordTypeBuilder
 
             // Generate backing fields
             let fieldBuilders =
@@ -71,34 +85,39 @@
                                 x.name + "@",
                                 ilTypeToMsilType x.type',
                                 FieldAttributes.Assembly)
-                        addCustomAttribute<DebuggerBrowsableAttribute>
-                            fieldBuilder
+                        addFieldAttr<DebuggerBrowsableAttribute>
                             [|DebuggerBrowsableState.Never|]
+                            fieldBuilder
                         fieldBuilder))
                 |> Map.ofList
 
             // Generate getter properties for backing fields
-            fieldBuilders
-            |> Map.iter (fun member' fieldBuilder ->
-                let getterType = fieldBuilder.FieldType
-                let getterPropBuilder =
+            members
+            |> List.iteri (fun i member' ->
+                let fieldBuilder = Map.find member' fieldBuilders
+                let type' = fieldBuilder.FieldType
+                let propBuilder =
                     recordTypeBuilder.DefineProperty(
                         member'.name,
                         PropertyAttributes.HasDefault,
-                        getterType,
+                        type',
                         null)
+                addPropAttr<CompilationMappingAttribute>
+                    [|SourceConstructFlags.Field; i|]
+                    propBuilder
                 let getter =
                     recordTypeBuilder.DefineMethod(
                         "get_" + member'.name,
                         MethodAttributes.Public |||
                         MethodAttributes.SpecialName |||
                         MethodAttributes.HideBySig,
-                        getterType,
+                        type',
                         Type.EmptyTypes)
                 let ilg = getter.GetILGenerator()
+                ilg.Emit(OpCodes.Ldarg_0)
                 ilg.Emit(OpCodes.Ldfld, fieldBuilder)
                 ilg.Emit(OpCodes.Ret)
-                getterPropBuilder.SetGetMethod(getter))
+                propBuilder.SetGetMethod(getter))
 
             // Generate constructor
             let ctor =
@@ -146,6 +165,14 @@
                     if hasSingleUnitParam then [||]
                     else List.map ilParameterToMsilType parameters |> Array.ofList)
             if not hasSingleUnitParam then
+                if parameters.Length > 1 then
+                    addMethodAttr<CompilationArgumentCountsAttribute>
+                        [|
+                            (parameters
+                            |> List.map (fun _ -> 1)
+                            |> Array.ofList)
+                        |]
+                        methodBuilder
                 parameters
                 |> List.iteri
                     (fun i ->
@@ -188,6 +215,9 @@
                 ||| TypeAttributes.Class
                 ||| TypeAttributes.Abstract
                 ||| TypeAttributes.Sealed)
+        addTypeAttr<CompilationMappingAttribute>
+            [|SourceConstructFlags.Module|]
+            typeBuilder
 
         List.iter (declCodegen typeBuilder) ilModule.decls
 
