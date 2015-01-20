@@ -3,6 +3,7 @@
     open System.IO
     open System.Reflection
     open System.Reflection.Emit
+    open System.Diagnostics
     open FFlat.Compiler.Common
     open FFlat.Compiler.Il
 
@@ -44,6 +45,13 @@
             exprCodegen ilg right
             ilg.Emit(binOpToOpCode op)
 
+    let addCustomAttribute<'a> (fieldBuilder : FieldBuilder) parameters =
+        let ctor =
+            typeof<'a>.GetConstructor(
+                Array.map (fun x -> x.GetType()) parameters)
+        let attr = new CustomAttributeBuilder(ctor, parameters)
+        fieldBuilder.SetCustomAttribute(attr)
+
     let declCodegen (typeBuilder : TypeBuilder) = function
         | IlRecord (name, members) ->
             let recordTypeBuilder =
@@ -58,11 +66,15 @@
                 members
                 |> List.map (fun x ->
                     (x,
-                        recordTypeBuilder.DefineField(
-                            x.name + "@",
-                            ilTypeToMsilType x.type',
-                            FieldAttributes.Private |||
-                            FieldAttributes.InitOnly)))
+                        let fieldBuilder =
+                            recordTypeBuilder.DefineField(
+                                x.name + "@",
+                                ilTypeToMsilType x.type',
+                                FieldAttributes.Assembly)
+                        addCustomAttribute<DebuggerBrowsableAttribute>
+                            fieldBuilder
+                            [|DebuggerBrowsableState.Never|]
+                        fieldBuilder))
                 |> Map.ofList
 
             // Generate getter properties for backing fields
