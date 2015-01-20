@@ -9,11 +9,6 @@
 #load "Codegen.fs"
 #load "Compiler.fs"
 
-open FFlat.Compiler.Common
-open FFlat.Compiler.Ast
-open FFlat.Compiler.Parser
-open FFlat.Compiler.Il
-open FFlat.Compiler.Optimization
 open FFlat.Compiler.Codegen
 open FFlat.Compiler.Compiler
 
@@ -44,4 +39,8 @@ module FirstVertical =
     [|-1 :> obj; -2 :> obj; -3 :> obj|]
     [|1 :> obj; 2 :> obj; 3 :> obj; 4 :> obj|]
 ]
-|> List.mapi (fun i x -> assembly.GetType("FirstVertical").GetMethod("func" + i.ToString()).Invoke(null, x))
+|> List.mapi (fun i x ->
+    assembly
+        .GetType("FirstVertical")
+        .GetMethod("func" + i.ToString())
+        .Invoke(null, x))
