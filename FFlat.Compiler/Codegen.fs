@@ -4,6 +4,7 @@
     open System.Reflection
     open System.Reflection.Emit
     open System.Diagnostics
+    open System.Runtime.Versioning
     open FFlat.Compiler.Common
     open FFlat.Compiler.Il
 
@@ -50,6 +51,24 @@
             typeof<'a>.GetConstructor(
                 Array.map (fun x -> x.GetType()) parameters)
         new CustomAttributeBuilder(ctor, parameters) |> f
+
+    let addAttrWithProps<'a> f parameters setters =
+        let type' = typeof<'a>
+        let ctor =
+            type'.GetConstructor(
+                Array.map (fun x -> x.GetType()) parameters)
+        new CustomAttributeBuilder(
+            ctor,
+            parameters,
+            Array.map (fst >> type'.GetProperty) setters,
+            Array.map snd setters)
+        |> f
+
+    let addAssemblyAttr<'a> (assemblyBuilder : AssemblyBuilder) =
+        addAttr<'a> assemblyBuilder.SetCustomAttribute
+
+    let addAssemblyAttrWithProps<'a> (assemblyBuilder : AssemblyBuilder) =
+        addAttrWithProps<'a> assemblyBuilder.SetCustomAttribute
 
     let addTypeAttr<'a> (typeBuilder : TypeBuilder) =
         addAttr<'a> typeBuilder.SetCustomAttribute
@@ -205,6 +224,19 @@
                     assemblyName,
                     AssemblyBuilderAccess.RunAndSave,
                     (Path.GetDirectoryName fileName))
+        addAssemblyAttr<FSharpInterfaceDataVersionAttribute>
+            assemblyBuilder
+            [|2; 0; 0|]
+        // I don't really know what this one does, but I'm putting it in here
+        // since fsc is dumping assemblies with this attached. Will look into
+        // it more later.
+        addAssemblyAttr<DebuggableAttribute>
+            assemblyBuilder
+            [|DebuggableAttribute.DebuggingModes.IgnoreSymbolStoreSequencePoints|]
+        addAssemblyAttrWithProps<TargetFrameworkAttribute>
+            assemblyBuilder
+            [|".NETFramework,Version=v4.5"|]
+            [|("FrameworkDisplayName", ".NET Framework 4.5" :> obj)|]
         let moduleBuilder =
             assemblyBuilder.DefineDynamicModule(ilModule.name, ilModule.name + ".dll", true)
 
