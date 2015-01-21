@@ -6,8 +6,9 @@
     open FFlat.Compiler.Il
     open FFlat.Compiler.Codegen.Common
 
-    let createRecordType
-        name (members : IlRecordMember list) (typeBuilder : TypeBuilder) =
+    let private createTypeBuilder
+        name
+        (typeBuilder : TypeBuilder) =
         let recordTypeBuilder =
             typeBuilder.DefineNestedType(
                 name,
@@ -17,30 +18,33 @@
         addTypeAttr<CompilationMappingAttribute>
             recordTypeBuilder
             [|SourceConstructFlags.RecordType|]
+        recordTypeBuilder
 
-        // Generate backing fields
-        let fieldBuilders =
-            members
-            |> List.map (fun x ->
-                (x,
-                    let fieldBuilder =
-                        recordTypeBuilder.DefineField(
-                            x.name + "@",
-                            ilTypeToMsilType x.type',
-                            FieldAttributes.Assembly)
-                    addFieldAttr<DebuggerBrowsableAttribute>
-                        fieldBuilder
-                        [|DebuggerBrowsableState.Never|]
-                    fieldBuilder))
-            |> Map.ofList
-
-        // Generate getter properties for backing fields
+    let private createBackingFields
+        (typeBuilder : TypeBuilder)
+        (members : IlRecordMember list) =
         members
-        |> List.iteri (fun i member' ->
+        |> List.map (fun x ->
+            (x,
+                let fieldBuilder =
+                    typeBuilder.DefineField(
+                        x.name + "@",
+                        ilTypeToMsilType x.type',
+                        FieldAttributes.Assembly)
+                addFieldAttr<DebuggerBrowsableAttribute>
+                    fieldBuilder
+                    [|DebuggerBrowsableState.Never|]
+                fieldBuilder))
+        |> Map.ofList
+
+    let private createGetterProps
+        (typeBuilder : TypeBuilder)
+        (fieldBuilders : Map<IlRecordMember, FieldBuilder>) =
+        List.iteri (fun i member' ->
             let fieldBuilder = Map.find member' fieldBuilders
             let type' = fieldBuilder.FieldType
             let propBuilder =
-                recordTypeBuilder.DefineProperty(
+                typeBuilder.DefineProperty(
                     member'.name,
                     PropertyAttributes.HasDefault,
                     type',
@@ -49,7 +53,7 @@
                 propBuilder
                 [|SourceConstructFlags.Field; i|]
             let getter =
-                recordTypeBuilder.DefineMethod(
+                typeBuilder.DefineMethod(
                     "get_" + member'.name,
                     MethodAttributes.Public |||
                     MethodAttributes.SpecialName |||
@@ -62,9 +66,12 @@
             ilg.Emit(OpCodes.Ret)
             propBuilder.SetGetMethod(getter))
 
-        // Generate constructor
+    let private createCtor
+        (typeBuilder : TypeBuilder)
+        (fieldBuilders : Map<IlRecordMember, FieldBuilder>)
+        members =
         let ctor =
-            recordTypeBuilder.DefineConstructor(
+            typeBuilder.DefineConstructor(
                 MethodAttributes.Public |||
                 MethodAttributes.HideBySig,
                 CallingConventions.Standard,
@@ -90,4 +97,9 @@
             ilg.Emit(OpCodes.Stfld, fieldBuilder))
         ilg.Emit(OpCodes.Ret)
 
+    let createRecordType name members typeBuilder =
+        let recordTypeBuilder = createTypeBuilder name typeBuilder
+        let fieldBuilders = createBackingFields recordTypeBuilder members
+        createGetterProps recordTypeBuilder fieldBuilders members
+        createCtor recordTypeBuilder fieldBuilders members
         recordTypeBuilder.CreateType()
