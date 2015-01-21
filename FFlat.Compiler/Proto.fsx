@@ -6,10 +6,12 @@
 #load "Parser.fs"
 #load "Il.fs"
 #load "Optimization.fs"
-#load "Codegen.fs"
+#load "Codegen.Common.fs"
+#load "Codegen.Records.fs"
+#load "Codegen.Main.fs"
 #load "Compiler.fs"
 
-open FFlat.Compiler.Codegen
+open FFlat.Compiler.Codegen.Main
 open FFlat.Compiler.Compiler
 
 let assembly =

@@ -3,7 +3,7 @@
     open FFlat.Compiler.Parser
     open FFlat.Compiler.Il
     open FFlat.Compiler.Optimization
-    open FFlat.Compiler.Codegen
+    open FFlat.Compiler.Codegen.Main
 
     let compile codeGenOptions =
         parseModule

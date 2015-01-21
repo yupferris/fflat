@@ -54,7 +54,9 @@
     <Compile Include="Parser.fs" />
     <Compile Include="Il.fs" />
     <Compile Include="Optimization.fs" />
-    <Compile Include="Codegen.fs" />
+    <Compile Include="Codegen.Common.fs" />
+    <Compile Include="Codegen.Records.fs" />
+    <Compile Include="Codegen.Main.fs" />
     <Compile Include="Compiler.fs" />
     <None Include="Proto.fsx" />
     <None Include="packages.config" />
