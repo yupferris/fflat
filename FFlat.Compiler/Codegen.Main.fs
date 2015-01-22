@@ -75,14 +75,13 @@
                 appDomain.DefineDynamicAssembly(
                     assemblyName,
                     AssemblyBuilderAccess.Run)
-            | Save (fileName) ->
+            | Save (outputDir) ->
                 let assemblyName =
-                    new AssemblyName(
-                        Path.GetFileNameWithoutExtension fileName)
+                    new AssemblyName(ilModule.name)
                 appDomain.DefineDynamicAssembly(
                     assemblyName,
                     AssemblyBuilderAccess.RunAndSave,
-                    (Path.GetDirectoryName fileName))
+                    outputDir)
         addAssemblyAttr<FSharpInterfaceDataVersionAttribute>
             assemblyBuilder
             [|2; 0; 0|]
@@ -96,8 +95,9 @@
             assemblyBuilder
             [|".NETFramework,Version=v4.5"|]
             [|("FrameworkDisplayName", ".NET Framework 4.5" :> obj)|]
+        let moduleFileName = ilModule.name + ".dll"
         let moduleBuilder =
-            assemblyBuilder.DefineDynamicModule(ilModule.name, ilModule.name + ".dll", true)
+            assemblyBuilder.DefineDynamicModule(ilModule.name, moduleFileName)
 
         let typeBuilder =
             moduleBuilder.DefineType(
@@ -115,7 +115,7 @@
         typeBuilder.CreateType() |> ignore
 
         match options with
-        | Save (fileName) -> assemblyBuilder.Save (Path.GetFileName fileName)
+        | Save (_) -> assemblyBuilder.Save moduleFileName
         | _ -> ()
 
         assemblyBuilder

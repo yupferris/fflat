@@ -15,7 +15,7 @@ open FFlat.Compiler.Codegen.Main
 open FFlat.Compiler.Compiler
 
 let assembly =
-    compile (Save "C:\\Users\\Ferris\\Documents\\derp.dll") (*RunOnly*) @"
+    compile (Save "C:\\Users\\Ferris\\Documents") (*RunOnly*) @"
 
 module FirstVertical =
     begin
