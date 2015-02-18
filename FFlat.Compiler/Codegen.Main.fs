@@ -115,7 +115,7 @@
         typeBuilder.CreateType() |> ignore
 
         match options with
-        | Save (_) -> assemblyBuilder.Save moduleFileName
+        | Save _ -> assemblyBuilder.Save moduleFileName
         | _ -> ()
 
         assemblyBuilder

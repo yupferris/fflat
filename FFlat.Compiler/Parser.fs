@@ -50,21 +50,19 @@
         |>> AstRecord
 
     let parameter =
-        ((unitValue |>> fun _ -> AstUnitParameter)
-        <|> (parens nameTypePair |>> AstNamedParameter))
+        (unitValue |>> fun _ -> AstUnitParameter)
+        <|> (parens nameTypePair |>> AstNamedParameter)
         //<|> (underscore |>> fun _ -> AstUnnamedParameter)
         .>> whitespace
 
     let functionDeclaration =
-        let' .>> whitespace
-        >>. identifier' .>> whitespace
-        .>>. many1 parameter
-        .>> equals .>> whitespace
-        .>>. expr
-        |>> fun xyz ->
-            let xy, z = xyz
-            let x, y = xy
-            AstFunction (x, y, z)
+        tuple3
+            (let' .>> whitespace
+            >>. identifier' .>> whitespace)
+            (many1 parameter
+            .>> equals .>> whitespace)
+            expr
+        |>> AstFunction
 
     let declaration = recordDeclaration <|> functionDeclaration
 
@@ -76,11 +74,11 @@
         .>> begin' .>> whitespace
         .>>. many declaration
         .>> whitespace
-        |>> (fun (name, decls) ->
+        |>> fun (name, decls) ->
                 {
                     name = name
                     decls = decls
-                })
+                }
         .>> whitespace
         .>> end'
 
